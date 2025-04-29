@@ -1,0 +1,5 @@
+---
+- name: Restart core-teamsquad-exporter service
+  systemd:
+    name: core-teamsquad-exporter
+    state: restarted

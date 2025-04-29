@@ -1,0 +1,63 @@
+---
+- name: Crear directorio de destino para el binario
+  file:
+    path: /opt/core-teamsquad-exporter
+    state: directory
+    mode: '0755'
+
+- name: Copiar el binario al servidor
+  copy:
+    src: core-teamsquad-exporter
+    dest: /opt/core-teamsquad-exporter/core-teamsquad-exporter
+    mode: '0755'
+
+- name: Copiar archivo de servicio systemd
+  template:
+    src: core-teamsquad-exporter.service.j2
+    dest: /etc/systemd/system/core-teamsquad-exporter.service
+    mode: '0644'
+
+- name: Recargar systemd
+  systemd:
+    daemon_reload: yes
+  notify: Restart core-teamsquad-exporter service
+
+- name: Habilitar y arrancar el servicio core-teamsquad-exporter
+  systemd:
+    name: core-teamsquad-exporter
+    enabled: yes
+    state: started
+
+- block:
+    - name: Comprobar si ufw está instalado
+      stat:
+        path: /usr/sbin/ufw
+      register: ufw_check
+
+    - name: Permitir acceso desde 162.244.211.0/24 a puerto 9988 con ufw
+      ufw:
+        rule: allow
+        port: 9988
+        proto: tcp
+        from_ip: 162.244.211.0/24
+      when: ufw_check.stat.exists
+
+    - name: Permitir acceso desde 64.239.70.0/24 a puerto 9988 con ufw
+      ufw:
+        rule: allow
+        port: 9988
+        proto: tcp
+        from_ip: 64.239.70.0/24
+      when: ufw_check.stat.exists
+
+  name: Añadir reglas con ufw si existe
+  rescue:
+    - name: Añadir regla iptables desde 162.244.211.0/24 a puerto 9988
+      command: iptables -A INPUT -p tcp -s 162.244.211.0/24 --dport 9988 -j ACCEPT
+
+    - name: Añadir regla iptables desde 64.239.70.0/24 a puerto 9988
+      command: iptables -A INPUT -p tcp -s 64.239.70.0/24 --dport 9988 -j ACCEPT
+
+    - name: Guardar reglas iptables (si se requiere)
+      command: iptables-save > /etc/iptables/rules.v4
+      when: ansible_facts['os_family'] == "Debian"

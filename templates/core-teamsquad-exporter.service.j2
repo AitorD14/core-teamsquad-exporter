@@ -1,0 +1,12 @@
+[Unit]
+Description=Core Teamsquad Exporter
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/core-teamsquad-exporter
+Environment="LOCATION={{ LOCATION }}" "TYPE={{ TYPE }}" "IP={{ IP }}"
+ExecStart=/opt/core-teamsquad-exporter/core-teamsquad-exporter
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
